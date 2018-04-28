@@ -1,6 +1,7 @@
 package ru.sbt.jschool.session9;
 
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -13,32 +14,57 @@ public class ContextImpl implements Context {
 
     @Override
     public int getCompletedTaskCount() {
-        AtomicInteger atomicInteger = new AtomicInteger(0);
+        AtomicInteger counter = new AtomicInteger();
         for (Future elem : futures) {
             if (elem.isDone()) {
-                atomicInteger.incrementAndGet();
+                counter.incrementAndGet();
             }
         }
-        return atomicInteger.get();
+        return counter.get();
     }
 
     @Override
     public int getFailedTaskCount() {
-        return 0;
+        AtomicInteger counter = new AtomicInteger();
+        for (Future elem : futures) {
+            if (elem.isDone()) {
+                try {
+                    elem.get();
+                } catch (InterruptedException | ExecutionException e) {
+                    e.printStackTrace();
+                    counter.incrementAndGet();
+                }
+            }
+        }
+        return counter.get();
     }
 
     @Override
     public int getInterruptedTaskCount() {
-        return 0;
+        AtomicInteger counter = new AtomicInteger();
+        for (Future elem : futures) {
+            if (elem.isCancelled()) {
+                counter.incrementAndGet();
+            }
+        }
+        return counter.get();
     }
 
     @Override
     public void interrupt() {
-
+        for (Future elem : futures) {
+            elem.cancel(false);
+        }
     }
 
     @Override
     public boolean isFinished() {
-        return false;
+        AtomicInteger counter = new AtomicInteger();
+        for (Future elem : futures) {
+            if (elem.isDone()) {
+                counter.incrementAndGet();
+            }
+        }
+        return counter.get() == futures.size();
     }
 }
